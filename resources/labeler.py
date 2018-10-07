@@ -10,28 +10,29 @@ corresponding subcategory folder based on the given disease label.
 Prerequisite:
     /image folder with Chest X-Ray .png files
 
-Disease label options:
-    ALL
-    Hernia
-    Edema
-    Emphysema
-    Pneumonia
-    Fibrosis
-    Nodule
-    Pneumothorax
-    Mass
-    Cardiomegaly
-    Atelectasis
-    Effusion
-    Consolidation
-    Infiltration
-    Pleural_Thickening
+Disease label options with filecount:
+    ALL                 51759
+    Hernia              110
+    Edema               628
+    Emphysema           892
+    Pneumonia           322
+    Fibrosis            727
+    Nodule              2705
+    Pneumothorax        2194
+    Mass                2139
+    Cardiomegaly        1093
+    Atelectasis         4215
+    Effusion            3955
+    Consolidation       1310
+    Infiltration        9547
+    Pleural_Thickening  1126
 """
 
 import os
 import shutil
 import pandas
 import time
+import sys
 
 # Control param
 DISEASE_LABEL = 'ALL'
@@ -41,6 +42,25 @@ ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 IMAGES_PATH = ROOT_PATH + '\\image'
 HEALTHY_IMAGES_PATH = ROOT_PATH + '\\healthy_chests'
 NONHEALTHY_IMAGES_PATH = ROOT_PATH + '\\nonhealthy_chests_' + DISEASE_LABEL
+
+if DISEASE_LABEL not in [
+    'ALL',
+    'Hernia',
+    'Edema',
+    'Emphysema',
+    'Pneumonia',
+    'Fibrosis',
+    'Nodule',
+    'Pneumothorax',
+    'Mass',
+    'Cardiomegaly',
+    'Atelectasis',
+    'Effusion,'
+    'Consolidation',
+    'Infiltration',
+    'Pleural_Thickening'
+]:
+    sys.exit("Given label not found, exiting.")
 
 fields = ['ImageName', 'FindingLabels']
 image_data = pandas.read_csv(ROOT_PATH + '\\' + 'Data_Entry_2017.csv', usecols=fields)
@@ -56,22 +76,37 @@ assert healthy['ImageName'].count() + non_healthy['ImageName'].count() == image_
 healthy_chest_files = healthy['ImageName'].tolist()
 nonhealthy_chest_files = non_healthy['ImageName'].tolist()
 
-try:
-    os.mkdir(HEALTHY_IMAGES_PATH)
-    os.mkdir(NONHEALTHY_IMAGES_PATH)
-except FileExistsError:
-    print("Clearing existing folders..")
-    try:
-        shutil.rmtree(HEALTHY_IMAGES_PATH)
-        shutil.rmtree(NONHEALTHY_IMAGES_PATH)
-    except Exception:
-        pass
-finally:
-    os.mkdir(HEALTHY_IMAGES_PATH)
-    os.mkdir(NONHEALTHY_IMAGES_PATH)
+
+def check_folder(path, filename_list):
+    """
+    Checks the completeness of a folder based on a given filelist.
+    :param path: directory to be checked
+    :param filename_list: name of the files
+    :return:
+        True: directory is complete
+        False: directory is incomplete
+    """
+    if os.path.exists(path):
+        if len(os.listdir(path)) == len(filename_list):
+            print("Directory {} is complete, no changes.".format(path.split("\\")[-1]))
+            return True
+        else:
+            print("Clearing {}".format(path.split("\\")[-1]))
+            shutil.rmtree(path)
+            os.mkdir(path)
+    else:
+        os.mkdir(path)
+    return False
 
 
 def copy_files(filename_list, source, destination):
+    """
+    Copies the given files from source to destination folder.
+    :param filename_list: name of the files
+    :param source: source directory
+    :param destination: destination directory
+    :return:
+    """
     cnt = 0
     print("\nCopying files to {}".format(destination.split("\\")[-1]))
     start = time.time()
@@ -84,13 +119,18 @@ def copy_files(filename_list, source, destination):
     print("Image copying finished in {}".format(elapsed))
 
 
-copy_files(healthy_chest_files, IMAGES_PATH, HEALTHY_IMAGES_PATH)
-copy_files(nonhealthy_chest_files, IMAGES_PATH, NONHEALTHY_IMAGES_PATH)
+print("Checking folders structure..")
+
+if check_folder(HEALTHY_IMAGES_PATH, healthy_chest_files) is False:
+    copy_files(healthy_chest_files, IMAGES_PATH, HEALTHY_IMAGES_PATH)
+
+if check_folder(NONHEALTHY_IMAGES_PATH, nonhealthy_chest_files) is False:
+    copy_files(nonhealthy_chest_files, IMAGES_PATH, NONHEALTHY_IMAGES_PATH)
 
 assert len(os.listdir(HEALTHY_IMAGES_PATH)) == len(healthy_chest_files) \
        and len(os.listdir(NONHEALTHY_IMAGES_PATH)) == len(nonhealthy_chest_files), \
        "File missing in destination folders, please rerun the script!"
 
-print("All files copied successfully!")
+print("Labeling done.")
 
 # End of file
